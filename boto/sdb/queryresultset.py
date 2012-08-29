@@ -14,10 +14,12 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
 # ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
+import time
+from boto.exception import SDBResponseError
 
 def query_lister(domain, query='', max_items=None, attr_names=None):
     more_results = True
@@ -34,7 +36,7 @@ def query_lister(domain, query='', max_items=None, attr_names=None):
             num_results += 1
         next_token = rs.next_token
         more_results = next_token != None
-        
+
 class QueryResultSet:
 
     def __init__(self, domain=None, query='', max_items=None, attr_names=None):
@@ -60,7 +62,7 @@ def select_lister(domain, query='', max_items=None):
             num_results += 1
         next_token = rs.next_token
         more_results = next_token != None
-        
+
 class SelectResultSet(object):
 
     def __init__(self, domain=None, query='', max_items=None,
@@ -75,9 +77,21 @@ class SelectResultSet(object):
         more_results = True
         num_results = 0
         while more_results:
-            rs = self.domain.connection.select(self.domain, self.query,
+            wait = 1
+            while True:
+                try:
+                    rs = self.domain.connection.select(self.domain, self.query,
                                                next_token=self.next_token,
                                                consistent_read=self.consistent_read)
+                except SDBResponseError as e:
+                    print 'Boto stinks.'
+                    print e.message
+                    print 'Trying again in %i seconds' % wait
+                    time.sleep(wait)
+                    wait = min(wait * 2, 10 * 60)
+                    continue
+                break
+
             for item in rs:
                 if self.max_items and num_results >= self.max_items:
                     raise StopIteration
