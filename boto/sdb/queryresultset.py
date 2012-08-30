@@ -83,9 +83,7 @@ class SelectResultSet(object):
                     rs = self.domain.connection.select(self.domain, self.query,
                                                next_token=self.next_token,
                                                consistent_read=self.consistent_read)
-                except SDBResponseError as e:
-                    print 'Boto stinks.'
-                    print e.message
+                except SDBResponseError:
                     print 'Trying again in %i seconds' % wait
                     time.sleep(wait)
                     wait = min(wait * 2, 10 * 60)
