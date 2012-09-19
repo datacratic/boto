@@ -83,7 +83,9 @@ class SelectResultSet(object):
                     rs = self.domain.connection.select(self.domain, self.query,
                                                next_token=self.next_token,
                                                consistent_read=self.consistent_read)
-                except SDBResponseError:
+                except SDBResponseError as e:
+                    print e
+                    print e.message
                     print 'Trying again in %i seconds' % wait
                     time.sleep(wait)
                     wait = min(wait * 2, 10 * 60)
